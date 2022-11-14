@@ -23,8 +23,8 @@ namespace OpenWorldServer
         public static string logFolderPath;
 
         //Player Parameters
-        public static List<ServerClient> savedClients = new List<ServerClient>();
-        public static Dictionary<string, List<string>> savedSettlements = new Dictionary<string, List<string>>();
+        public static List<ServerClient> savedClients = new();
+        public static Dictionary<string, List<string>> savedSettlements = new();
 
         //Server Details
         public static string serverName = "";
@@ -52,16 +52,16 @@ namespace OpenWorldServer
         public static bool usingEnforcedDifficulty = false;
 
         //Server Mods
-        public static List<string> enforcedMods = new List<string>();
-        public static List<string> whitelistedMods = new List<string>();
-        public static List<string> blacklistedMods = new List<string>();
+        public static List<string> enforcedMods = new();
+        public static List<string> whitelistedMods = new();
+        public static List<string> blacklistedMods = new();
 
         //Server Lists
-        public static List<string> whitelistedUsernames = new List<string>();
-        public static List<string> adminList = new List<string>();
-        public static List<string> chatCache = new List<string>();
-        public static Dictionary<string, string> bannedIPs = new Dictionary<string, string>();
-        public static List<Faction> savedFactions = new List<Faction>();
+        public static List<string> whitelistedUsernames = new();
+        public static List<string> adminList = new();
+        public static List<string> chatCache = new();
+        public static Dictionary<string, string> bannedIPs = new();
+        public static List<Faction> savedFactions = new();
 
         //World Parameters
         public static float globeCoverage;
