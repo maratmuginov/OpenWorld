@@ -1,12 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using OpenWorldServer.Models;
 using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace OpenWorldServer
 {
     internal class Program
     {
-        static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             IServiceProvider serviceProvider = new ServiceCollection()
                 .AddScoped<Server>()
@@ -22,11 +24,13 @@ namespace OpenWorldServer
                 .AddScoped<FactionBankHandler>()
                 .AddScoped<SimpleCommands>()
                 .AddScoped<AdvancedCommands>()
+                .AddScoped<HttpClient>()
                 .AddScoped<WorldUtils>()
+                .AddScoped<ServerUtils>()
                 .BuildServiceProvider();
 
             var server = serviceProvider.GetRequiredService<Server>();
-            server.Start();
+            await server.StartAsync();
         }
     }
 }

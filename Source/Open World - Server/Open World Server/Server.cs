@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace OpenWorldServer
 {
-    [System.Serializable]
     public class Server
     {
         //Meta
@@ -76,23 +76,26 @@ namespace OpenWorldServer
         private readonly AdvancedCommands _advancedCommands;
         private readonly FactionHandler _factionHandler;
         private readonly Networking _networking;
+        private readonly ServerUtils _serverUtils;
 
-        public Server(PlayerUtils playerUtils, SimpleCommands simpleCommands, AdvancedCommands advancedCommands, FactionHandler factionHandler, Networking networking)
+        public Server(PlayerUtils playerUtils, SimpleCommands simpleCommands, AdvancedCommands advancedCommands, FactionHandler factionHandler, Networking networking, ServerUtils serverUtils)
         {
             _playerUtils = playerUtils;
             _simpleCommands = simpleCommands;
             _advancedCommands = advancedCommands;
             _factionHandler = factionHandler;
             _networking = networking;
+            _serverUtils = serverUtils;
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
             ServerUtils.SetPaths();
             ServerUtils.SetCulture();
 
-            ServerUtils.CheckServerVersion();
-            ServerUtils.CheckClientVersionRequirement();
+            await CheckServerVersionAsync();
+            await CheckRequiredClientVersionAsync();
+
             ServerUtils.CheckSettingsFile();
 
             ModHandler.CheckMods(true);
@@ -110,6 +113,49 @@ namespace OpenWorldServer
             while (!exit)
             {
                 ListenForCommands();
+            }
+        }
+
+        public async Task CheckServerVersionAsync()
+        {
+            Console.WriteLine("");
+            Console.ForegroundColor = ConsoleColor.Green;
+            ConsoleUtils.LogToConsole("Server Version Check:");
+            Console.ForegroundColor = ConsoleColor.White;
+            try
+            {
+                string latestVersion = await _serverUtils.GetRequiredServerVersionAsync();
+                if (serverVersion == latestVersion)
+                    ConsoleUtils.LogToConsole("Running Latest Version");
+                else
+                    ConsoleUtils.LogToConsole("Running Outdated Or Unstable version. Please Update From Github At Earliest Convenience To Prevent Errors");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            catch
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                ConsoleUtils.LogToConsole("Version Check Failed. This Is Not Dangerous");
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+        }
+
+        private async Task CheckRequiredClientVersionAsync()
+        {
+            Console.WriteLine("");
+            Console.ForegroundColor = ConsoleColor.Green;
+            ConsoleUtils.LogToConsole("Client Version Check:");
+            Console.ForegroundColor = ConsoleColor.White;
+
+            try
+            {
+                latestClientVersion = await _serverUtils.GetRequiredClientVersionAsync();
+                ConsoleUtils.LogToConsole($"Listening For Version [{latestClientVersion}]");
+            }
+            catch
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                ConsoleUtils.LogToConsole("Version Check Failed. This Is Not Dangerous");
+                Console.ForegroundColor = ConsoleColor.White;
             }
         }
 

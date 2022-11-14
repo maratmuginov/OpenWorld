@@ -3,12 +3,14 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace OpenWorldServer
 {
     public class ServerUtils
     {
         private readonly HttpClient _httpClient;
+        private const string _versionCheckUri = "https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache";
 
         public ServerUtils(HttpClient httpClient)
         {
@@ -47,66 +49,24 @@ namespace OpenWorldServer
             ConsoleUtils.LogToConsole("Base Directory At: [" + Server.mainFolderPath + "]");
         }
 
-        public static void CheckServerVersion()
+        
+
+        public async Task<string> GetRequiredServerVersionAsync()
         {
-            Console.WriteLine("");
-            Console.ForegroundColor = ConsoleColor.Green;
-            ConsoleUtils.LogToConsole("Server Version Check:");
-            Console.ForegroundColor = ConsoleColor.White;
-
-            string latestVersion = "";
-
-            try
-            {
-                string requestUri = "https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache";
-
-                WebClient wc = new WebClient();
-                latestVersion = wc.DownloadString(requestUri);
-                latestVersion = latestVersion.Split('│')[1].Replace("- Latest Server Version: ", "");
-                latestVersion = latestVersion.Remove(0, 1);
-                latestVersion = latestVersion.Remove(latestVersion.Length - 1, 1);
-            }
-
-            catch
-            {
-                Console.ForegroundColor = ConsoleColor.White;
-                ConsoleUtils.LogToConsole("Version Check Failed. This Is Not Dangerous");
-                Console.ForegroundColor = ConsoleColor.White;
-            }
-
-            if (Server.serverVersion == latestVersion) ConsoleUtils.LogToConsole("Running Latest Version");
-            else ConsoleUtils.LogToConsole("Running Outdated Or Unstable version. Please Update From Github At Earliest Convenience To Prevent Errors");
-            Console.ForegroundColor = ConsoleColor.White;
+            string version = await _httpClient.GetStringAsync(_versionCheckUri);
+            return version.Split('│')[2]
+                .Replace("- Latest Server Version: ", string.Empty)
+                .Remove(0, 1)
+                .Remove(version.Length - 1, 1);
         }
 
-        public static void CheckClientVersionRequirement()
+        public async Task<string> GetRequiredClientVersionAsync()
         {
-            Console.WriteLine("");
-            Console.ForegroundColor = ConsoleColor.Green;
-            ConsoleUtils.LogToConsole("Client Version Check:");
-            Console.ForegroundColor = ConsoleColor.White;
-
-            try
-            {
-                string version;
-
-                WebClient wc = new WebClient();
-                version = wc.DownloadString("https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache");
-                version = version.Split('│')[2].Replace("- Latest Client Version: ", "");
-                version = version.Remove(0, 1);
-                version = version.Remove(version.Length - 1, 1);
-
-                Server.latestClientVersion = version;
-
-                ConsoleUtils.LogToConsole("Listening For Version [" + Server.latestClientVersion + "]");
-            }
-
-            catch
-            {
-                Console.ForegroundColor = ConsoleColor.White;
-                ConsoleUtils.LogToConsole("Version Check Failed. This Is Not Dangerous");
-                Console.ForegroundColor = ConsoleColor.White;
-            }
+            string version = await _httpClient.GetStringAsync(_versionCheckUri);
+            return version.Split('│')[1]
+                .Replace("- Latest Client Version: ", string.Empty)
+                .Remove(0, 1)
+                .Remove(version.Length - 1, 1);
         }
 
         public static void CheckSettingsFile()
