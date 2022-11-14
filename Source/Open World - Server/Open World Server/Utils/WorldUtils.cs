@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class WorldUtils
+    public class WorldUtils
     {
-        public static void AddSettlement(ServerClient? client, string tileID, string username)
+        private readonly SaveSystem _saveSystem;
+
+        public WorldUtils(SaveSystem saveSystem)
+        {
+            _saveSystem = saveSystem;
+        }
+
+        public void AddSettlement(ServerClient? client, string tileID, string username)
         {
             if (client != null)
             {
@@ -22,7 +28,7 @@ namespace OpenWorldServer
                     }
                 }
 
-                PlayerUtils.SavePlayer(client);
+                _saveSystem.SavePlayer(client);
             }
 
             int factionValue = 0;
@@ -50,7 +56,7 @@ namespace OpenWorldServer
             ConsoleUtils.LogToConsole("Settlement With ID [" + tileID + "] And Owner [" + username + "] Has Been Added");
         }
 
-        public static void RemoveSettlement(ServerClient? client, string tile)
+        public void RemoveSettlement(ServerClient? client, string tile)
         {
             if (client != null)
             {
@@ -66,7 +72,7 @@ namespace OpenWorldServer
                     }
                 }
 
-                PlayerUtils.SavePlayer(client);
+                _saveSystem.SavePlayer(client);
             }
 
             if (!string.IsNullOrWhiteSpace(tile))
@@ -90,7 +96,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void CheckForTileDisponibility(ServerClient client, string tileID)
+        public void CheckForTileDisponibility(ServerClient client, string tileID)
         {
             ServerClient[] savedClients = Server.savedClients.ToArray();
             foreach (ServerClient savedClient in savedClients)

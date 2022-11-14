@@ -1,19 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
-using System.Text;
-using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class AdvancedCommands
+    public class AdvancedCommands
     {
         public static string commandData;
+        private readonly SaveSystem _saveSystem;
+
+        public AdvancedCommands(SaveSystem saveSystem)
+        {
+            _saveSystem = saveSystem;
+        }
 
         //Communication
 
-        public static void SayCommand()
+        public void SayCommand()
         {
             if (string.IsNullOrWhiteSpace(commandData))
             {
@@ -38,7 +41,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void BroadcastCommand()
+        public void BroadcastCommand()
         {
             if (string.IsNullOrWhiteSpace(commandData))
             {
@@ -61,7 +64,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void NotifyCommand()
+        public void NotifyCommand()
         {
             bool isMissingParameters = false;
 
@@ -102,7 +105,7 @@ namespace OpenWorldServer
 
         //Items
 
-        public static void GiveItemCommand()
+        public void GiveItemCommand()
         {
             Console.Clear();
 
@@ -125,7 +128,7 @@ namespace OpenWorldServer
                 ConsoleUtils.WriteWithTime("Usage: Giveitem [username] [itemID] [itemQuantity] [itemQuality]");
                 Console.WriteLine();
             }
-            
+
             else
             {
                 ServerClient targetClient = Networking.connectedClients.Find(fetch => fetch.username == clientID);
@@ -148,7 +151,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void GiveItemAllCommand()
+        public void GiveItemAllCommand()
         {
             Console.Clear();
 
@@ -186,7 +189,7 @@ namespace OpenWorldServer
 
         //Anti-PvP
 
-        public static void ImmunizeCommand()
+        public void ImmunizeCommand()
         {
             Console.Clear();
 
@@ -214,7 +217,7 @@ namespace OpenWorldServer
                 {
                     targetClient.isImmunized = true;
                     Server.savedClients.Find(fetch => fetch.username == targetClient.username).isImmunized = true;
-                    PlayerUtils.SavePlayer(targetClient);
+                    _saveSystem.SavePlayer(targetClient);
 
                     Console.ForegroundColor = ConsoleColor.Green;
                     ConsoleUtils.WriteWithTime("Player [" + targetClient.username + "] Has Been Inmmunized");
@@ -223,7 +226,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void DeimmunizeCommand()
+        public void DeimmunizeCommand()
         {
             Console.Clear();
 
@@ -251,7 +254,7 @@ namespace OpenWorldServer
                 {
                     targetClient.isImmunized = false;
                     Server.savedClients.Find(fetch => fetch.username == targetClient.username).isImmunized = false;
-                    PlayerUtils.SavePlayer(targetClient);
+                    _saveSystem.SavePlayer(targetClient);
 
                     Console.ForegroundColor = ConsoleColor.Green;
                     ConsoleUtils.WriteWithTime("Player [" + targetClient.username + "] Has Been Deinmmunized");
@@ -260,7 +263,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void ProtectCommand()
+        public void ProtectCommand()
         {
             Console.Clear();
 
@@ -296,7 +299,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void DeprotectCommand()
+        public void DeprotectCommand()
         {
             Console.Clear();
 
@@ -334,7 +337,7 @@ namespace OpenWorldServer
 
         //Events
 
-        public static void InvokeCommand()
+        public void InvokeCommand()
         {
             Console.Clear();
 
@@ -375,7 +378,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void PlagueCommand()
+        public void PlagueCommand()
         {
             Console.Clear();
 
@@ -401,7 +404,7 @@ namespace OpenWorldServer
 
         //Administration
 
-        public static void PromoteCommand()
+        public void PromoteCommand()
         {
             Console.Clear();
 
@@ -438,7 +441,7 @@ namespace OpenWorldServer
                     {
                         targetClient.isAdmin = true;
                         Server.savedClients.Find(fetch => fetch.username == clientID).isAdmin = true;
-                        PlayerUtils.SavePlayer(targetClient);
+                        _saveSystem.SavePlayer(targetClient);
 
                         Networking.SendData(targetClient, "Admin│Promote");
 
@@ -450,7 +453,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void DemoteCommand()
+        public void DemoteCommand()
         {
             Console.Clear();
 
@@ -487,7 +490,7 @@ namespace OpenWorldServer
                     {
                         targetClient.isAdmin = false;
                         Server.savedClients.Find(fetch => fetch.username == targetClient.username).isAdmin = false;
-                        PlayerUtils.SavePlayer(targetClient);
+                        _saveSystem.SavePlayer(targetClient);
 
                         Networking.SendData(targetClient, "Admin│Demote");
 
@@ -499,7 +502,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void PlayerDetailsCommand()
+        public void PlayerDetailsCommand()
         {
             Console.Clear();
 
@@ -572,13 +575,13 @@ namespace OpenWorldServer
                     ConsoleUtils.WriteWithTime("Details: ");
                     Console.ForegroundColor = ConsoleColor.White;
                     ConsoleUtils.WriteWithTime("Home Tile ID: [" + targetClient.homeTileID + "]");
-                    ConsoleUtils.WriteWithTime("Faction: [" + (targetClient.faction == null ? "None" : targetClient.faction.name)  + "]");
+                    ConsoleUtils.WriteWithTime("Faction: [" + (targetClient.faction == null ? "None" : targetClient.faction.name) + "]");
                     Console.WriteLine();
                 }
             }
         }
 
-        public static void FactionDetailsCommand()
+        public void FactionDetailsCommand()
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Green;
@@ -642,7 +645,7 @@ namespace OpenWorldServer
 
         //Security
 
-        public static void BanCommand()
+        public void BanCommand()
         {
             Console.Clear();
 
@@ -671,7 +674,7 @@ namespace OpenWorldServer
                     Server.bannedIPs.Add(((IPEndPoint)targetClient.tcp.Client.RemoteEndPoint).Address.ToString(), targetClient.username);
                     targetClient.disconnectFlag = true;
 
-                    SaveSystem.SaveBannedIPs(Server.bannedIPs);
+                    _saveSystem.SaveBans(Server.bannedIPs);
                     Console.ForegroundColor = ConsoleColor.Green;
                     ConsoleUtils.LogToConsole("Player [" + targetClient.username + "] Has Been Banned");
                     ConsoleUtils.LogToConsole(Environment.NewLine);
@@ -679,7 +682,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void PardonCommand()
+        public void PardonCommand()
         {
             Console.Clear();
 
@@ -699,7 +702,7 @@ namespace OpenWorldServer
                     if (pair.Value == clientID)
                     {
                         Server.bannedIPs.Remove(pair.Key);
-                        SaveSystem.SaveBannedIPs(Server.bannedIPs);
+                        _saveSystem.SaveBans(Server.bannedIPs);
                         Console.ForegroundColor = ConsoleColor.Green;
                         ConsoleUtils.LogToConsole("Player [" + pair.Value + "] Has Been Unbanned");
                         Console.ForegroundColor = ConsoleColor.White;
@@ -711,10 +714,10 @@ namespace OpenWorldServer
                 Console.ForegroundColor = ConsoleColor.Green;
                 ConsoleUtils.WriteWithTime("Player [" + clientID + "] Not Found");
                 Console.WriteLine();
-            }    
+            }
         }
 
-        public static void KickCommand()
+        public void KickCommand()
         {
             Console.Clear();
 

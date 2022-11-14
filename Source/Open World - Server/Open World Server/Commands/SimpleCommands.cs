@@ -2,16 +2,25 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
-using System.Text;
-using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class SimpleCommands
+    public class SimpleCommands
     {
+        private readonly PlayerUtils _playerUtils;
+        private readonly SaveSystem _saveSystem;
+        private readonly FactionHandler _factionHandler;
+
+        public SimpleCommands(PlayerUtils playerUtils, SaveSystem saveSystem, FactionHandler factionHandler)
+        {
+            _playerUtils = playerUtils;
+            _saveSystem = saveSystem;
+            _factionHandler = factionHandler;
+        }
+
         //Miscellaneous
 
-        public static void HelpCommand()
+        public void HelpCommand()
         {
             Console.Clear();
 
@@ -74,7 +83,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void SettingsCommand()
+        public void SettingsCommand()
         {
             Console.Clear();
 
@@ -100,7 +109,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void ModListCommand()
+        public void ModListCommand()
         {
             Console.Clear();
 
@@ -129,7 +138,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void ExitCommand()
+        public void ExitCommand()
         {
             ServerClient[] clientsToKick = Networking.connectedClients.ToArray();
             foreach (ServerClient sc in clientsToKick)
@@ -141,12 +150,12 @@ namespace OpenWorldServer
             Server.exit = true;
         }
 
-        public static void ClearCommand()
+        public void ClearCommand()
         {
             Console.Clear();
         }
 
-        public static void ReloadCommand()
+        public void ReloadCommand()
         {
             Console.Clear();
 
@@ -156,15 +165,15 @@ namespace OpenWorldServer
             WorldHandler.CheckWorldFile();
             Console.ForegroundColor = ConsoleColor.Green;
 
-            FactionHandler.CheckFactions(false);
+            _factionHandler.CheckFactions(false);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("");
 
-            PlayerUtils.CheckAllAvailablePlayers(false);
+            _playerUtils.CheckAllAvailablePlayers(false);
             Console.ForegroundColor = ConsoleColor.Green;
         }
 
-        public static void StatusCommand()
+        public void StatusCommand()
         {
             Console.Clear();
 
@@ -252,7 +261,7 @@ namespace OpenWorldServer
 
         //Administration
 
-        public static void WhiteListCommand()
+        public void WhiteListCommand()
         {
             Console.Clear();
 
@@ -267,7 +276,7 @@ namespace OpenWorldServer
         }
 
         //Check this one
-        public static void AdminListCommand()
+        public void AdminListCommand()
         {
             Console.Clear();
 
@@ -289,7 +298,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void BanListCommand()
+        public void BanListCommand()
         {
             Console.Clear();
 
@@ -310,7 +319,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void WipeCommand()
+        public void WipeCommand()
         {
             Console.Clear();
 
@@ -333,7 +342,7 @@ namespace OpenWorldServer
                 {
                     client.wealth = 0;
                     client.pawnCount = 0;
-                    PlayerUtils.SavePlayer(client);
+                    _saveSystem.SavePlayer(client);
                 }
 
                 Console.Clear();
@@ -347,7 +356,7 @@ namespace OpenWorldServer
 
         //Player Interaction
 
-        public static void ListCommand()
+        public void ListCommand()
         {
             Console.Clear();
 
@@ -412,8 +421,8 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void SettlementsCommand()
-        {
+        public void SettlementsCommand()
+        {   
             Console.Clear();
 
             Console.ForegroundColor = ConsoleColor.Green;
@@ -433,7 +442,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void ChatCommand()
+        public void ChatCommand()
         {
             Console.Clear();
 
@@ -454,7 +463,7 @@ namespace OpenWorldServer
             Console.WriteLine("");
         }
 
-        public static void EventListCommand()
+        public void EventListCommand()
         {
             Console.Clear();
             Console.ForegroundColor = ConsoleColor.Green;
@@ -477,7 +486,7 @@ namespace OpenWorldServer
 
         //Unknown
 
-        public static void UnknownCommand(string command)
+        public void UnknownCommand(string command)
         {
             Console.Clear();
 

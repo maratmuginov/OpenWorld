@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -8,115 +7,107 @@ using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class Networking
+    public class Networking
     {
+        private readonly NetworkingHandler _networkingHandler;
+        private readonly FactionBankHandler _factionBankHandler;
+        private readonly Dictionary<string, Action<ServerClient, string>> clientMessageHandlers;
+
+        public Networking(NetworkingHandler networkingHandler, FactionBankHandler factionBankHandler)
+        {
+            _networkingHandler = networkingHandler;
+            clientMessageHandlers = new Dictionary<string, Action<ServerClient, string>>()
+            {
+                {"Connect", _networkingHandler.ConnectHandle },
+                {"ChatMessage", _networkingHandler.ChatMessageHandle },
+                {"UserSettlement", _networkingHandler.UserSettlementHandle },
+                {"ForceEvent", _networkingHandler.ForceEventHandle },
+                {"SendGiftTo", _networkingHandler.SendGiftHandle },
+                {"SendTradeTo", _networkingHandler.SendTradeHandle },
+                {"SendBarterTo", _networkingHandler.SendBarterHandle },
+                {"TradeStatus", _networkingHandler.TradeStatusHandle },
+                {"BarterStatus", _networkingHandler.BarterStatusHandle },
+                {"GetSpyInfo", _networkingHandler.SpyInfoHandle },
+                {"FactionManagement", _networkingHandler.FactionManagementHandle }
+            };
+            _factionBankHandler = factionBankHandler;
+        }
+
         private static TcpListener server;
         public static IPAddress localAddress;
         public static int serverPort = 0;
+        public static List<ServerClient> connectedClients = new();
 
-        public static List<ServerClient> connectedClients = new List<ServerClient>();
-
-        public static void ReadyServer()
+        public void ReadyServer()
         {
             server = new TcpListener(localAddress, serverPort);
             server.Start();
 
             ConsoleUtils.UpdateTitle();
 
-            Threading.GenerateThreads(1);
-            Threading.GenerateThreads(2);
-            Threading.GenerateThreads(3);
+            Thread checkThread = new(CheckClientsConnection)
+            {
+                IsBackground = true,
+                Name = "Check Thread"
+            };
+            checkThread.Start();
 
-            while (true) ListenForIncomingUsers();
+            Thread factionProductionSiteTickThread = new(FactionProductionSiteHandler.TickProduction)
+            {
+                IsBackground = true,
+                Name = "Factions Production Site Tick Thread"
+            };
+            factionProductionSiteTickThread.Start();
+
+            Thread factionBankTickThread = new(_factionBankHandler.TickBank)
+            {
+                IsBackground = true,
+                Name = "Factions Bank Tick Thread"
+            };
+            factionBankTickThread.Start();
+
+            while (true)
+                ListenForIncomingUsers();
         }
 
-        private static void ListenForIncomingUsers()
+        private void ListenForIncomingUsers()
         {
-            ServerClient newServerClient = new ServerClient(server.AcceptTcpClient());
+            ServerClient newServerClient = new(server.AcceptTcpClient());
 
             connectedClients.Add(newServerClient);
 
-            Threading.GenerateClientThread(newServerClient);
+            var clientThread = new Thread(() => ListenToClient(newServerClient));
+            clientThread.IsBackground = true;
+            clientThread.Name = "User Thread " + newServerClient.username;
+            clientThread.Start();
         }
 
-        public static void ListenToClient(ServerClient client)
+        public void ListenToClient(ServerClient client)
         {
-            NetworkStream s = client.tcp.GetStream();
-            StreamReader sr = new StreamReader(s, true);
+            NetworkStream stream = client.tcp.GetStream();
+            StreamReader streamReader = new(stream, true);
 
             while (true)
             {
                 try
                 {
-                    if (client.disconnectFlag) return;
+                    if (client.disconnectFlag)
+                        return;
 
-                    string encryptedData = sr.ReadLine();
+                    string encryptedData = streamReader.ReadLine();
                     string data = Encryption.DecryptString(encryptedData);
 
-                    if (data == null)
+                    if (string.IsNullOrEmpty(data))
                     {
                         client.disconnectFlag = true;
                         return;
                     }
 
-                    //if (data != "Ping") Debug.WriteLine(data);
+                    string networkingCommand = data[..data.IndexOf('|')];
 
-                    if (data.StartsWith("Connect│"))
-                    {
-                        NetworkingHandler.ConnectHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("ChatMessage│"))
-                    {
-                        NetworkingHandler.ChatMessageHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("UserSettlement│"))
-                    {
-                        NetworkingHandler.UserSettlementHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("ForceEvent│"))
-                    {
-                        NetworkingHandler.ForceEventHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("SendGiftTo│"))
-                    {
-                        NetworkingHandler.SendGiftHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("SendTradeTo│"))
-                    {
-                        NetworkingHandler.SendTradeHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("SendBarterTo│"))
-                    {
-                        NetworkingHandler.SendBarterHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("TradeStatus│"))
-                    {
-                        NetworkingHandler.TradeStatusHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("BarterStatus│"))
-                    {
-                        NetworkingHandler.BarterStatusHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("GetSpyInfo│"))
-                    {
-                        NetworkingHandler.SpyInfoHandle(client, data);
-                    }
-
-                    else if (data.StartsWith("FactionManagement│"))
-                    {
-                        NetworkingHandler.FactionManagementHandle(client, data);
-                    }
+                    if (clientMessageHandlers.TryGetValue(networkingCommand, out Action<ServerClient, string> handler))
+                        handler.Invoke(client, data);
                 }
-
                 catch
                 {
                     client.disconnectFlag = true;
@@ -129,13 +120,16 @@ namespace OpenWorldServer
         {
             try
             {
-                NetworkStream s = client.tcp.GetStream();
-                StreamWriter sw = new StreamWriter(s);
+                NetworkStream stream = client.tcp.GetStream();
+                StreamWriter streamWriter = new(stream);
 
-                sw.WriteLine(Encryption.EncryptString(data));
-                sw.Flush();
+                streamWriter.WriteLine(Encryption.EncryptString(data));
+                streamWriter.Flush();
             }
-            catch { client.disconnectFlag = true; }
+            catch 
+            {
+                client.disconnectFlag = true;
+            }
         }
 
         public static void KickClients(ServerClient client)
@@ -157,18 +151,21 @@ namespace OpenWorldServer
 
                 ServerClient[] actualClients = connectedClients.ToArray();
 
-                List<ServerClient> clientsToDisconnect = new List<ServerClient>();
+                var clientsToDisconnect = new List<ServerClient>();
+                var clientsToPing = new List<ServerClient>();
 
                 foreach (ServerClient client in actualClients)
                 {
-                    if (client.disconnectFlag) clientsToDisconnect.Add(client);
-                    else SendData(client, "Ping");
+                    if (client.disconnectFlag)
+                        clientsToDisconnect.Add(client);
+                    else
+                        clientsToPing.Add(client);
                 }
 
+                clientsToPing.ForEach(client => SendData(client, "Ping"));
+
                 foreach (ServerClient client in clientsToDisconnect)
-                {
                     KickClients(client);
-                }
 
                 if (clientsToDisconnect.Count > 0)
                 {

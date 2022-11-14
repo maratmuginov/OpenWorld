@@ -1,24 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-
-namespace OpenWorldServer
+﻿namespace OpenWorldServer
 {
-    public static class NetworkingHandler
+    public class NetworkingHandler
     {
-        public static void ConnectHandle(ServerClient client, string data)
+        private readonly PlayerUtils _playerUtils;
+        private readonly FactionHandler _factionHandler;
+        private readonly WorldUtils _worldUtils;
+        private readonly JoiningsUtils _joiningsUtils;
+        private readonly FactionBuildingHandler _factionBuildingHandler;
+        private readonly FactionSiloHandler _factionSiloHandler;
+        private readonly FactionBankHandler _factionBankHandler;
+
+        public NetworkingHandler(PlayerUtils playerUtils, FactionHandler factionHandler, JoiningsUtils joiningsUtils, FactionBuildingHandler factionBuildingHandler, WorldUtils worldUtils, FactionSiloHandler factionSiloHandler)
         {
-            JoiningsUtils.LoginProcedures(client, data);
+            _playerUtils = playerUtils;
+            _factionHandler = factionHandler;
+            _joiningsUtils = joiningsUtils;
+            _factionBuildingHandler = factionBuildingHandler;
+            _worldUtils = worldUtils;
+            _factionSiloHandler = factionSiloHandler;
         }
 
-        public static void ChatMessageHandle(ServerClient client, string data)
+        public void ConnectHandle(ServerClient client, string data)
+        {
+            _joiningsUtils.LoginProcedures(client, data);
+        }
+
+        public void ChatMessageHandle(ServerClient client, string data)
         {
             ServerUtils.SendChatMessage(client, data);
         }
 
-        public static void UserSettlementHandle(ServerClient client, string data)
+        public void UserSettlementHandle(ServerClient client, string data)
         {
             if (data.StartsWith("UserSettlement│NewSettlementID│"))
             {
@@ -27,30 +39,29 @@ namespace OpenWorldServer
                     client.wealth = float.Parse(data.Split('│')[3]);
                     client.pawnCount = int.Parse(data.Split('│')[4]);
 
-                    PlayerUtils.CheckForPlayerWealth(client);
+                    _playerUtils.CheckForPlayerWealth(client);
                 }
                 catch { }
 
-                WorldUtils.CheckForTileDisponibility(client, data.Split('│')[2]);
+                _worldUtils.CheckForTileDisponibility(client, data.Split('│')[2]);
             }
 
             else if (data.StartsWith("UserSettlement│AbandonSettlementID│"))
             {
                 if (client.homeTileID != data.Split('│')[2] || string.IsNullOrWhiteSpace(client.homeTileID)) return;
-                else WorldUtils.RemoveSettlement(client, data.Split('│')[2]);
+                else _worldUtils.RemoveSettlement(client, data.Split('│')[2]);
             }
 
             else if (data == "UserSettlement│NoSettlementInLoad")
             {
                 if (string.IsNullOrWhiteSpace(client.homeTileID)) return;
-                else WorldUtils.RemoveSettlement(client, client.homeTileID);
+                else _worldUtils.RemoveSettlement(client, client.homeTileID);
             }
         }
 
-        public static void ForceEventHandle(ServerClient client, string data)
+        public void ForceEventHandle(ServerClient client, string data)
         {
-            string dataToSend = "";
-
+            string dataToSend;
             if (PlayerUtils.CheckForConnectedPlayers(data.Split('│')[2]))
             {
                 if (PlayerUtils.CheckForPlayerShield(data.Split('│')[2]))
@@ -67,12 +78,12 @@ namespace OpenWorldServer
             Networking.SendData(client, dataToSend);
         }
 
-        public static void SendGiftHandle(ServerClient client, string data)
+        public void SendGiftHandle(ServerClient client, string data)
         {
-            PlayerUtils.SendGiftToPlayer(client, data);
+            _playerUtils.SendGiftToPlayer(client, data);
         }
 
-        public static void SendTradeHandle(ServerClient client, string data)
+        public void SendTradeHandle(ServerClient client, string data)
         {
             string dataToSend = "";
 
@@ -87,7 +98,7 @@ namespace OpenWorldServer
             Networking.SendData(client, dataToSend);
         }
 
-        public static void SendBarterHandle(ServerClient client, string data)
+        public void SendBarterHandle(ServerClient client, string data)
         {
             string dataToSend = "";
 
@@ -102,7 +113,7 @@ namespace OpenWorldServer
             Networking.SendData(client, dataToSend);
         }
 
-        public static void TradeStatusHandle(ServerClient client, string data)
+        public void TradeStatusHandle(ServerClient client, string data)
         {
             string username = data.Split('│')[2];
             ServerClient target = null;
@@ -131,7 +142,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void BarterStatusHandle(ServerClient client, string data)
+        public void BarterStatusHandle(ServerClient client, string data)
         {
             string user = data.Split('│')[2];
             ServerClient target = null;
@@ -171,10 +182,9 @@ namespace OpenWorldServer
             }
         }
 
-        public static void SpyInfoHandle(ServerClient client, string data)
+        public void SpyInfoHandle(ServerClient client, string data)
         {
-            string dataToSend = "";
-
+            string dataToSend;
             if (PlayerUtils.CheckForConnectedPlayers(data.Split('│')[1]))
             {
                 dataToSend = "│SentSpy│Confirm│" + PlayerUtils.GetSpyData(data.Split('│')[1], client);
@@ -184,7 +194,7 @@ namespace OpenWorldServer
             Networking.SendData(client, dataToSend);
         }
 
-        public static void FactionManagementHandle(ServerClient client, string data)
+        public void FactionManagementHandle(ServerClient client, string data)
         {
             if (data == "FactionManagement│Refresh")
             {
@@ -201,7 +211,8 @@ namespace OpenWorldServer
                 if (string.IsNullOrWhiteSpace(factionName)) return;
 
                 Faction factionToFetch = Server.savedFactions.Find(fetch => fetch.name == factionName);
-                if (factionToFetch == null) FactionHandler.CreateFaction(factionName, client);
+                if (factionToFetch is null)
+                    _factionHandler.CreateFaction(factionName, client);
                 else Networking.SendData(client, "FactionManagement│NameInUse");
             }
 
@@ -216,14 +227,14 @@ namespace OpenWorldServer
                 }
 
                 Faction factionToCheck = client.faction;
-                FactionHandler.PurgeFaction(factionToCheck);
+                _factionHandler.PurgeFaction(factionToCheck);
             }
 
             else if (data == "FactionManagement│Leave")
             {
                 if (client.faction == null) return;
 
-                FactionHandler.RemoveMember(client.faction, client);
+                _factionHandler.RemoveMember(client.faction, client);
             }
 
             else if (data.StartsWith("FactionManagement│Join│"))
@@ -233,7 +244,7 @@ namespace OpenWorldServer
                 Faction factionToJoin = Server.savedFactions.Find(fetch => fetch.name == factionString);
 
                 if (factionToJoin == null) return;
-                else FactionHandler.AddMember(factionToJoin, client);
+                else _factionHandler.AddMember(factionToJoin, client);
             }
 
             else if (data.StartsWith("FactionManagement│AddMember"))
@@ -280,7 +291,7 @@ namespace OpenWorldServer
 
                     if (memberToRemove.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToRemove.faction.name != factionToCheck.name) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.RemoveMember(factionToCheck, memberToRemove);
+                    else _factionHandler.RemoveMember(factionToCheck, memberToRemove);
                 }
 
                 else
@@ -289,7 +300,7 @@ namespace OpenWorldServer
 
                     if (memberToRemove.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToRemove.faction != client.faction) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.RemoveMember(client.faction, memberToRemove);
+                    else _factionHandler.RemoveMember(client.faction, memberToRemove);
                 }
             }
 
@@ -314,7 +325,7 @@ namespace OpenWorldServer
 
                     if (memberToPromote.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToPromote.faction.name != factionToCheck.name) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.PromoteMember(factionToCheck, memberToPromote);
+                    else _factionHandler.PromoteMember(factionToCheck, memberToPromote);
                 }
 
                 else
@@ -323,7 +334,7 @@ namespace OpenWorldServer
 
                     if (memberToPromote.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToPromote.faction != client.faction) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.PromoteMember(client.faction, memberToPromote);
+                    else _factionHandler.PromoteMember(client.faction, memberToPromote);
                 }
             }
 
@@ -348,7 +359,7 @@ namespace OpenWorldServer
 
                     if (memberToDemote.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToDemote.faction.name != factionToCheck.name) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.DemoteMember(factionToCheck, memberToDemote);
+                    else _factionHandler.DemoteMember(factionToCheck, memberToDemote);
                 }
 
                 else
@@ -357,7 +368,7 @@ namespace OpenWorldServer
 
                     if (memberToDemote.faction == null) Networking.SendData(client, "FactionManagement│NotInFaction");
                     else if (memberToDemote.faction != client.faction) Networking.SendData(client, "FactionManagement│NotInFaction");
-                    else FactionHandler.DemoteMember(client.faction, memberToDemote);
+                    else _factionHandler.DemoteMember(client.faction, memberToDemote);
                 }
             }
 
@@ -378,7 +389,7 @@ namespace OpenWorldServer
 
                 if (string.IsNullOrWhiteSpace(structureID)) return;
 
-                FactionBuildingHandler.BuildStructure(client.faction, tileID, structureID);
+                _factionBuildingHandler.BuildStructure(client.faction, tileID, structureID);
             }
 
             else if (data.StartsWith("FactionManagement│DestroyStructure"))
@@ -395,15 +406,15 @@ namespace OpenWorldServer
 
                 if (string.IsNullOrWhiteSpace(tileID)) return;
 
-                FactionBuildingHandler.DestroyStructure(client.faction, tileID);
+                _factionBuildingHandler.DestroyStructure(client.faction, tileID);
             }
 
             else if (data.StartsWith("FactionManagement│Silo"))
             {
                 if (client.faction == null) return;
 
-                FactionSilo siloToFind = client.faction.factionStructures.Find(fetch => fetch is FactionSilo) as FactionSilo;
-                if (siloToFind == null) return;
+                if (client.faction.factionStructures.Find(fetch => fetch is FactionSilo) is not FactionSilo siloToFind)
+                    return;
 
                 string siloID = data.Split('│')[3];
 
@@ -422,7 +433,7 @@ namespace OpenWorldServer
 
                     if (string.IsNullOrWhiteSpace(items)) return;
 
-                    FactionSiloHandler.DepositIntoSilo(client.faction, siloID, items);
+                    _factionSiloHandler.DepositIntoSilo(client.faction, siloID, items);
                 }
 
                 if (data.StartsWith("FactionManagement│Silo│Withdraw"))
@@ -433,38 +444,41 @@ namespace OpenWorldServer
 
                     if (string.IsNullOrWhiteSpace(itemID)) return;
 
-                    FactionSiloHandler.WithdrawFromSilo(client.faction, siloID, itemID, client);
+                    _factionSiloHandler.WithdrawFromSilo(client.faction, siloID, itemID, client);
                 }
             }
 
             else if (data.StartsWith("FactionManagement│Bank"))
             {
-                if (client.faction == null) return;
+                if (client.faction == null)
+                    return;
 
-                FactionBank bankToFind = client.faction.factionStructures.Find(fetch => fetch is FactionBank) as FactionBank;
-                if (bankToFind == null) return;
+                if (client.faction.factionStructures.Find(fetch => fetch is FactionBank) is not FactionBank bankToFind)
+                    return;
 
                 if (data.StartsWith("FactionManagement│Bank│Refresh"))
                 {
-                    FactionBankHandler.RefreshMembersBankDetails(client.faction);
+                    _factionBankHandler.RefreshMembersBankDetails(client.faction);
                 }
 
                 else if (data.StartsWith("FactionManagement│Bank│Deposit"))
                 {
                     int quantity = int.Parse(data.Split('│')[3]);
 
-                    if (quantity == 0) return;
-
-                    FactionBankHandler.DepositMoney(client.faction, quantity);
+                    if (quantity == 0)
+                        return;
+                        
+                    _factionBankHandler.DepositMoney(client.faction, quantity);
                 }
 
                 else if (data.StartsWith("FactionManagement│Bank│Withdraw"))
                 {
                     int quantity = int.Parse(data.Split('│')[3]);
 
-                    if (quantity == 0) return;
+                    if (quantity == 0)
+                        return;
 
-                    FactionBankHandler.WithdrawMoney(client.faction, quantity, client);
+                    _factionBankHandler.WithdrawMoney(client.faction, quantity, client);
                 }
             }
         }

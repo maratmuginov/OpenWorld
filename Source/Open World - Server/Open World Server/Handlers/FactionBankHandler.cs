@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class FactionBankHandler
+    public class FactionBankHandler
     {
-        public static void TickBank()
+        private readonly SaveSystem _saveSystem;
+
+        public void TickBank()
         {
             while (true)
             {
@@ -23,7 +22,7 @@ namespace OpenWorldServer
                     else
                     {
                         bankToFind.depositedSilver += 100;
-                        FactionHandler.SaveFaction(faction);
+                        _saveSystem.SaveFaction(faction);
                     }
                 }
 
@@ -31,7 +30,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void DepositMoney(Faction faction, int quantity)
+        public void DepositMoney(Faction faction, int quantity)
         {
             FactionBank bankToFind = faction.factionStructures.Find(fetch => fetch is FactionBank) as FactionBank;
 
@@ -39,12 +38,12 @@ namespace OpenWorldServer
 
             bankToFind.depositedSilver += quantity;
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             RefreshMembersBankDetails(faction);
         }
 
-        public static void WithdrawMoney(Faction faction, int quantity, ServerClient client)
+        public void WithdrawMoney(Faction faction, int quantity, ServerClient client)
         {
             FactionBank bankToFind = faction.factionStructures.Find(fetch => fetch is FactionBank) as FactionBank;
 
@@ -55,12 +54,12 @@ namespace OpenWorldServer
 
             Networking.SendData(client, "FactionManagement│Bank│Withdraw" + "│" + quantity);
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             RefreshMembersBankDetails(faction);
         }
 
-        public static void RefreshMembersBankDetails(Faction faction)
+        public void RefreshMembersBankDetails(Faction faction)
         {
             FactionBank bankToFind = faction.factionStructures.Find(fetch => fetch is FactionBank) as FactionBank;
 

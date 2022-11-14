@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace OpenWorldServer
 {
     [System.Serializable]
-    public static class Server
+    public class Server
     {
         //Meta
         public static bool exit = false;
@@ -70,7 +71,22 @@ namespace OpenWorldServer
         public static int overallPopulation;
         public static string latestClientVersion;
 
-        static void Main()
+        private readonly PlayerUtils _playerUtils;
+        private readonly SimpleCommands _simpleCommands;
+        private readonly AdvancedCommands _advancedCommands;
+        private readonly FactionHandler _factionHandler;
+        private readonly Networking _networking;
+
+        public Server(PlayerUtils playerUtils, SimpleCommands simpleCommands, AdvancedCommands advancedCommands, FactionHandler factionHandler, Networking networking)
+        {
+            _playerUtils = playerUtils;
+            _simpleCommands = simpleCommands;
+            _advancedCommands = advancedCommands;
+            _factionHandler = factionHandler;
+            _networking = networking;
+        }
+
+        public void Start()
         {
             ServerUtils.SetPaths();
             ServerUtils.SetCulture();
@@ -80,16 +96,24 @@ namespace OpenWorldServer
             ServerUtils.CheckSettingsFile();
 
             ModHandler.CheckMods(true);
-            FactionHandler.CheckFactions(true);
+            _factionHandler.CheckFactions(true);
             WorldHandler.CheckWorldFile();
-            PlayerUtils.CheckAllAvailablePlayers(false);
+            _playerUtils.CheckAllAvailablePlayers(false);
 
-            Threading.GenerateThreads(0);
+            Thread networkingThread = new(_networking.ReadyServer)
+            {
+                IsBackground = true,
+                Name = "Networking Thread"
+            };
+            networkingThread.Start();
 
-            while (!exit) ListenForCommands();
+            while (!exit)
+            {
+                ListenForCommands();
+            }
         }
 
-        public static void ListenForCommands()
+        public void ListenForCommands()
         {
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -99,61 +123,59 @@ namespace OpenWorldServer
             string commandArguments = "";
             if (fullCommand.Contains(' ')) commandArguments = fullCommand.Replace(fullCommand.Split(' ')[0], "").Remove(0, 1);
 
-            Dictionary<string, Action> simpleCommands = new Dictionary<string, Action>()
+            Dictionary<string, Action> simpleCommands = new()
             {
-                {"help", SimpleCommands.HelpCommand},
-                {"settings", SimpleCommands.SettingsCommand},
-                {"modlist", SimpleCommands.ModListCommand},
-                {"reload", SimpleCommands.ReloadCommand},
-                {"status", SimpleCommands.StatusCommand},
-                {"eventlist", SimpleCommands.EventListCommand},
-                {"chat", SimpleCommands.ChatCommand},
-                {"list", SimpleCommands.ListCommand},
-                {"settlements", SimpleCommands.SettlementsCommand},
-                {"banlist", SimpleCommands.BanListCommand},
-                {"adminlist", SimpleCommands.AdminListCommand},
-                {"whitelist", SimpleCommands.WhiteListCommand},
-                {"wipe", SimpleCommands.WipeCommand},
-                {"clear", SimpleCommands.ClearCommand},
-                {"exit", SimpleCommands.ExitCommand}
+                {"help", _simpleCommands.HelpCommand},
+                {"settings", _simpleCommands    .SettingsCommand},
+                {"modlist", _simpleCommands.ModListCommand},
+                {"reload", _simpleCommands.ReloadCommand},
+                {"status", _simpleCommands.StatusCommand},
+                {"eventlist", _simpleCommands.EventListCommand},
+                {"chat", _simpleCommands.ChatCommand},
+                {"list", _simpleCommands.ListCommand},
+                {"settlements", _simpleCommands.SettlementsCommand},
+                {"banlist", _simpleCommands.BanListCommand},
+                {"adminlist", _simpleCommands.AdminListCommand},
+                {"whitelist", _simpleCommands.WhiteListCommand},
+                {"wipe", _simpleCommands.WipeCommand},
+                {"clear", _simpleCommands.ClearCommand},
+                {"exit", _simpleCommands.ExitCommand}
             };
 
-            Dictionary<string, Action> advancedCommands = new Dictionary<string, Action>()
+            Dictionary<string, Action> advancedCommands = new()
             {
-                {"say", AdvancedCommands.SayCommand},
-                {"broadcast", AdvancedCommands.BroadcastCommand},
-                {"notify", AdvancedCommands.NotifyCommand},
-                {"invoke", AdvancedCommands.InvokeCommand},
-                {"plague", AdvancedCommands.PlagueCommand},
-                {"player", AdvancedCommands.PlayerDetailsCommand},
-                {"faction", AdvancedCommands.FactionDetailsCommand},
-                {"kick", AdvancedCommands.KickCommand},
-                {"ban", AdvancedCommands.BanCommand},
-                {"pardon", AdvancedCommands.PardonCommand},
-                {"promote", AdvancedCommands.PromoteCommand},
-                {"demote", AdvancedCommands.DemoteCommand},
-                {"giveitem", AdvancedCommands.GiveItemCommand},
-                {"giveitemall", AdvancedCommands.GiveItemAllCommand},
-                {"protect", AdvancedCommands.ProtectCommand},
-                {"deprotect", AdvancedCommands.DeprotectCommand},
-                {"immunize", AdvancedCommands.ImmunizeCommand},
-                {"deimmunize", AdvancedCommands.DeimmunizeCommand}
+                {"say", _advancedCommands.SayCommand},
+                {"broadcast", _advancedCommands.BroadcastCommand},
+                {"notify", _advancedCommands.NotifyCommand},
+                {"invoke", _advancedCommands.InvokeCommand},
+                {"plague", _advancedCommands.PlagueCommand},
+                {"player", _advancedCommands.PlayerDetailsCommand},
+                {"faction", _advancedCommands.FactionDetailsCommand},
+                {"kick", _advancedCommands.KickCommand},
+                {"ban", _advancedCommands.BanCommand},
+                {"pardon", _advancedCommands.PardonCommand},
+                {"promote", _advancedCommands.PromoteCommand},
+                {"demote", _advancedCommands.DemoteCommand},
+                {"giveitem", _advancedCommands.GiveItemCommand},
+                {"giveitemall", _advancedCommands.GiveItemAllCommand},
+                {"protect", _advancedCommands.ProtectCommand},
+                {"deprotect", _advancedCommands.DeprotectCommand},
+                {"immunize", _advancedCommands.ImmunizeCommand},
+                {"deimmunize", _advancedCommands.DeimmunizeCommand}
             };
 
             try
             {
-                if (simpleCommands.ContainsKey(commandBase))
-                {
-                    simpleCommands[commandBase]();
-                }
+                if (simpleCommands.TryGetValue(commandBase, out Action command))
+                    command();
 
-                else if (advancedCommands.ContainsKey(commandBase))
+                else if (advancedCommands.TryGetValue(commandBase, out Action advancedCommand))
                 {
                     AdvancedCommands.commandData = commandArguments;
-                    advancedCommands[commandBase]();
+                    advancedCommand();
                 }
 
-                else SimpleCommands.UnknownCommand(commandBase);
+                else _simpleCommands.UnknownCommand(commandBase);
             }
 
             catch 

@@ -6,9 +6,11 @@ using System.Threading;
 
 namespace OpenWorldServer
 {
-    public static class JoiningsUtils
+    public class JoiningsUtils
     {
-        public static void LoginProcedures(ServerClient client, string data)
+        private readonly PlayerUtils _playerUtils;
+
+        public void LoginProcedures(ServerClient client, string data)
         {
             client.username = data.Split('│')[1].ToLower();
             client.password = data.Split('│')[2];
@@ -25,7 +27,8 @@ namespace OpenWorldServer
             if (!ParseClientUsername(client)) return;
             CompareConnectingClientWithConnecteds(client);
 
-            if (!CheckIfUserExisted(client)) PlayerUtils.SaveNewPlayerFile(client.username, client.password);
+            if (!CheckIfUserExisted(client))
+                _playerUtils.SaveNewPlayerFile(client.username, client.password);
             else if (!CheckForPassword(client)) return;
 
             ConsoleUtils.UpdateTitle();
@@ -34,13 +37,13 @@ namespace OpenWorldServer
             CheckForJoinMode(client, joinMode);
         }
 
-        private static void CheckForJoinMode(ServerClient client, string joinMode)
+        private void CheckForJoinMode(ServerClient client, string joinMode)
         {
             if (joinMode == "NewGame") SendNewGameData(client);
 
             else if (joinMode == "LoadGame")
             {
-                PlayerUtils.GiveSavedDataToPlayer(client);
+                _playerUtils.GiveSavedDataToPlayer(client);
                 SendLoadGameData(client);
             }
 
@@ -48,11 +51,11 @@ namespace OpenWorldServer
                 ((IPEndPoint)client.tcp.Client.RemoteEndPoint).Address.ToString() + "] Has Connected");
         }
 
-        private static void SendNewGameData(ServerClient client)
+        private void SendNewGameData(ServerClient client)
         {
             //We give saved data back to return data that is not removed at new creation
-            PlayerUtils.GiveSavedDataToPlayer(client);
-            PlayerUtils.SaveNewPlayerFile(client.username, client.password);
+            _playerUtils.GiveSavedDataToPlayer(client);
+            _playerUtils.SaveNewPlayerFile(client.username, client.password);
 
             Networking.SendData(client, GetPlanetToSend());
 

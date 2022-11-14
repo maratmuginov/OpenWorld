@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<RuntimeIdentifiers>linux-arm64</RuntimeIdentifiers>
-		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 		<RootNamespace>OpenWorldServer</RootNamespace>
 		<Platforms>AnyCPU;ARM32;ARM64</Platforms>
 	</PropertyGroup>
@@ -14,4 +14,12 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Relese|AnyCPU'">
 		<PlatformTarget>AnyCPU</PlatformTarget>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Folder Include="Services\Commands\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+	</ItemGroup>
 </Project>

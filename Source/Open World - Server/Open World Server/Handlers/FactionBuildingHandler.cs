@@ -4,8 +4,15 @@ using System.Text;
 
 namespace OpenWorldServer
 {
-    public static class FactionBuildingHandler
+    public class FactionBuildingHandler
     {
+        private readonly SaveSystem _saveSystem;
+
+        public FactionBuildingHandler(SaveSystem saveSystem)
+        {
+            _saveSystem = saveSystem;
+        }
+
         public static string GetAllFactionStructures(ServerClient client)
         {
             string dataToSend = "FactionStructures│";
@@ -32,7 +39,7 @@ namespace OpenWorldServer
             return dataToSend;
         }
 
-        public static void BuildStructure(Faction faction, string tileID, string structureID)
+        public void BuildStructure(Faction faction, string tileID, string structureID)
         {
             int newStructureTile = int.Parse(tileID);
             int newStructureIntValue = int.Parse(structureID);
@@ -56,7 +63,7 @@ namespace OpenWorldServer
 
             faction.factionStructures.Add(structureToBuild);
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             int factionValue = 0;
             foreach (ServerClient client in Networking.connectedClients)
@@ -72,7 +79,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void DestroyStructure(Faction faction, string tileID)
+        public void DestroyStructure(Faction faction, string tileID)
         {
             int structureTile = int.Parse(tileID);
 
@@ -81,7 +88,7 @@ namespace OpenWorldServer
 
             faction.factionStructures.Remove(structureToDestroy);
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             foreach (ServerClient client in Networking.connectedClients)
             {

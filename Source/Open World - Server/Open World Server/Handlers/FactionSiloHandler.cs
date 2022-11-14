@@ -6,8 +6,15 @@ using System.Text;
 
 namespace OpenWorldServer
 {
-    public static class FactionSiloHandler
+    public class FactionSiloHandler
     {
+        private readonly SaveSystem _saveSystem;
+
+        public FactionSiloHandler(SaveSystem saveSystem)
+        {
+            _saveSystem = saveSystem;
+        }
+
         public static string GetSiloContents(Faction faction, string siloTileID)
         {
             int structureTile = int.Parse(siloTileID);
@@ -33,7 +40,7 @@ namespace OpenWorldServer
             return dataToSend;
         }
 
-        public static void DepositIntoSilo(Faction faction, string siloTileID, string items)
+        public void DepositIntoSilo(Faction faction, string siloTileID, string items)
         {
             int structureTile = int.Parse(siloTileID);
 
@@ -85,7 +92,7 @@ namespace OpenWorldServer
             var orderedDictionary = siloToFech.holdingItems.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
             siloToFech.holdingItems = orderedDictionary;
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             ServerClient[] dummyfactionMembers = faction.members.Keys.ToArray();
             foreach (ServerClient dummy in dummyfactionMembers)
@@ -98,7 +105,7 @@ namespace OpenWorldServer
             }
         }
 
-        public static void WithdrawFromSilo(Faction faction, string siloTileID, string siloItemID, ServerClient client)
+        public void WithdrawFromSilo(Faction faction, string siloTileID, string siloItemID, ServerClient client)
         {
             int structureTile = int.Parse(siloTileID);
 
@@ -138,7 +145,7 @@ namespace OpenWorldServer
 
             siloToFech.holdingItems = orderedDictionary;
 
-            FactionHandler.SaveFaction(faction);
+            _saveSystem.SaveFaction(faction);
 
             ServerClient[] dummyfactionMembers = faction.members.Keys.ToArray();
             foreach (ServerClient dummy in dummyfactionMembers)

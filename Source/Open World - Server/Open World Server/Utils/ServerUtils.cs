@@ -1,14 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
+using System.Net.Http;
 
 namespace OpenWorldServer
 {
-    public static class ServerUtils
+    public class ServerUtils
     {
+        private readonly HttpClient _httpClient;
+
+        public ServerUtils(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+        }
+
         public static void SetCulture()
         {
             Console.ForegroundColor = ConsoleColor.White;
@@ -52,11 +58,13 @@ namespace OpenWorldServer
 
             try
             {
+                string requestUri = "https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache";
+
                 WebClient wc = new WebClient();
-                latestVersion = wc.DownloadString("https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache");
+                latestVersion = wc.DownloadString(requestUri);
                 latestVersion = latestVersion.Split('│')[1].Replace("- Latest Server Version: ", "");
                 latestVersion = latestVersion.Remove(0, 1);
-                latestVersion = latestVersion.Remove(latestVersion.Count() - 1, 1);
+                latestVersion = latestVersion.Remove(latestVersion.Length - 1, 1);
             }
 
             catch
@@ -86,7 +94,7 @@ namespace OpenWorldServer
                 version = wc.DownloadString("https://raw.githubusercontent.com/TastyLollipop/OpenWorld/main/Latest%20Versions%20Cache");
                 version = version.Split('│')[2].Replace("- Latest Client Version: ", "");
                 version = version.Remove(0, 1);
-                version = version.Remove(version.Count() - 1, 1);
+                version = version.Remove(version.Length - 1, 1);
 
                 Server.latestClientVersion = version;
 
@@ -423,7 +431,7 @@ namespace OpenWorldServer
                     else dataToSend += sc.username + ":";
                 }
 
-                dataToSend += "│" + Networking.connectedClients.Count();
+                dataToSend += "│" + Networking.connectedClients.Count;
 
                 return dataToSend;
             }
