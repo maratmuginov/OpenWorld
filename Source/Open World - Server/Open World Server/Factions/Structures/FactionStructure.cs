@@ -4,7 +4,6 @@ using System.Text;
 
 namespace OpenWorldServer
 {
-    [System.Serializable]
     public abstract class FactionStructure
     {
         public enum StructureType { Silo, Marketplace, ProductionSite, Wonder, Bank, Stable, Courier }

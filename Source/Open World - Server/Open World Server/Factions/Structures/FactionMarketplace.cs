@@ -4,7 +4,6 @@ using System.Text;
 
 namespace OpenWorldServer
 {
-    [System.Serializable]
     public class FactionMarketplace : FactionStructure
     {
         public override Faction holdingFaction => base.holdingFaction;
